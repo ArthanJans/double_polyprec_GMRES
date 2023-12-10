@@ -2,6 +2,7 @@ from gmres import gmres
 import numpy as np
 import time
 import scipy.sparse.linalg as spla
+import scipy.sparse as sparse
 
 if __name__ == "__main__":
     n = 101
@@ -21,6 +22,7 @@ if __name__ == "__main__":
         if i > 0:
             A[i-1,i] = 1
             A[i,i-1] = 1
+    A = sparse.csr_matrix(A)
     
     x0 = np.zeros(n)
     b = np.ones(n) 
