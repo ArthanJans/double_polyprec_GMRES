@@ -1,6 +1,8 @@
 import numpy as np
 import math
 
+from arnoldi import arnoldi
+
 """
 Solve equation Ax = b using gmres algorithm
 Arguments:
@@ -57,29 +59,7 @@ def gmres(A: np.ndarray, x0: np.ndarray, b: np.ndarray, maxIterations: int, thre
         y[i] = ((betaE[i] - np.sum(H[i+1:j+1, i] * y[i+1:])) / H[i,i])
 
     x = x0 + (np.transpose(V[:j+1]) @ y) # x is solved using V and y
-    return x
-
-"""
-Apply an iteration of arnoldi to create a new vector for the basis of the krylov subspace of A
-Arguments:
-A     :Matrix to form krylov subspace of
-V     :Matrix of row vectors forming the existing basis of the krylov subspace
-j     :The number of iterations of arnoldi already performed
-
-Returns:
-wj    :A new vector in the basis of the krylov subspace which is orthogonal to all other vectors in the basis and is normalised
-Hj    :A new row of the Hessenberg matrix
-"""
-def arnoldi(A: np.ndarray, V: np.ndarray, j: int):
-    wj = (A @ V[j]) # Multiply previous basis vector by A
-    Hj = np.zeros(j+2) 
-
-    for i in range(j+1): # Apply Gram-Schmidt to orthoganlise wj w.r.t existing basis
-        Hj[i] = (wj @ V[i]) 
-        wj -= (Hj[i] * V[i])
-    
-    Hj[j+1] = np.linalg.norm(wj, 2) # Store the norm of wj and then normalise it
-    return wj/Hj[j+1], Hj
+    return x, j+1
 
 """
 Applies givens rotations to the row of H and creates a new rotation to ensure H is square and lower triangular

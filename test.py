@@ -16,18 +16,18 @@ if __name__ == "__main__":
     #     [..................]
     #     [0, ..., 0, 1, 2, 1]
     #     [0, ..., 0, 0, 1, 2]
-    A = np.zeros((n,n))
+    A = sparse.csr_matrix((n,n))
     for i in range(n):
         A[i,i] = 2
         if i > 0:
             A[i-1,i] = 1
             A[i,i-1] = 1
-    A = sparse.csr_matrix(A)
+    
     
     x0 = np.zeros(n)
     b = np.ones(n) 
     start = time.perf_counter()
-    x = gmres(A, x0, b, n, 0.00001)
+    x, iterations = gmres(A, x0, b, n, 0.00001)
     print("My time:", time.perf_counter() - start)
     
 
