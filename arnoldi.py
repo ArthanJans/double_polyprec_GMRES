@@ -13,11 +13,14 @@ Hj    :A new row of the Hessenberg matrix
 """
 def arnoldi(A: np.ndarray, V: np.ndarray, j: int):
     wj = (A @ V[j]) # Multiply previous basis vector by A
-    Hj = np.zeros(j+2) 
+    # FIXME : this Hj is being allocated every time that this function is
+    #         called .. which might want to be changed for performance
+    Hj = np.zeros(j+2,dtype=complex)
 
     for i in range(j+1): # Apply Gram-Schmidt to orthoganlise wj w.r.t existing basis
-        Hj[i] = (wj @ V[i]) 
+        #Hj[i] = (wj @ V[i])
+        Hj[i] = np.vdot(wj,V[i])
         wj -= (Hj[i] * V[i])
-    
+
     Hj[j+1] = np.linalg.norm(wj, 2) # Store the norm of wj and then normalise it
     return wj/Hj[j+1], Hj
