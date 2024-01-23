@@ -1,5 +1,4 @@
 import numpy as np
-import math
 
 from arnoldi import arnoldi
 
@@ -22,27 +21,32 @@ def gmres(A: np.ndarray, x0: np.ndarray, b: np.ndarray, maxIterations: int, thre
     beta = np.linalg.norm(r0, 2) # Norm of starting residual
     bNorm = np.linalg.norm(b, 2) # Norm of b, used to calculate error
 
-    # Following 2 matrices are stored as transpose of what is usually seen in literature. This is for performance since numpy is quicker when chaning the last index, instead of the first.
-    V = np.zeros((maxIterations+1,m)) # Matrix of row vectors that form a basis of the krylov subspace of A
-    H = np.zeros((maxIterations,maxIterations+1)) # Hessenberg matrix H such that A @ V[:n] = V[:n+1] @ H[:n]
+    V = np.empty((m,maxIterations+1), dtype=complex, order='F') # Matrix of column vectors that form a basis of the krylov subspace of A
+    H = np.zeros((maxIterations+1,maxIterations), dtype=complex, order='F') # Hessenberg matrix H such that A @ V[:n] = V[:n+1] @ H[:n]
 
-    V[0] = r0/beta # First vector of the krylov subspace's basis is the normalised starting residual
+    V[:,0] = r0/beta # First vector of the krylov subspace's basis is the normalised starting residual
 
-    sn = np.zeros(maxIterations) # Store the sines for givens rotations
-    cs = np.zeros(maxIterations) # Store the cosines for givens rotations
+    sn = np.empty(maxIterations, dtype=complex) # Store the sines for givens rotations
+    cs = np.empty(maxIterations, dtype=complex) # Store the cosines for givens rotations
 
-    betaE = np.zeros(maxIterations+1) # Vector of [beta, 0, ..., 0] Used for calculating the residual at each iteration
+    betaE = np.zeros(maxIterations+1, dtype=complex) # Vector of [beta, 0, ..., 0] Used for calculating the residual at each iteration
     betaE[0] = beta
 
     # Perform a maximum of maxIterations iterations of GMRES
     for j in range(maxIterations):
         # Arnoldi
-        V[j+1], H[j,:j+2] = arnoldi(A, V, j) # Add a new vector to the basis in V and add a new row to H
-        if H[j,j+1] == 0: # If the new vector was eliminated during orthoganisation, stop iterating
+        V[:,j+1] = arnoldi(A, V, j, H[:j+2,j]) # Add a new vector to the basis in V and add a new row to H
+        if H[j+1,j] == 0: # If the new vector was eliminated during orthoganisation, stop iterating
             break
+        lhsOrth = np.empty([j+2,j+2],dtype=complex)
+        for ix in range(j+2):
+            for jx in range(j+2):
+                lhsOrth[ix,jx] = np.vdot(V[:,ix],V[:,jx])
+        rhsOrth = np.identity(j+2)
+        print(np.linalg.norm(lhsOrth-rhsOrth,'fro')/np.linalg.norm(rhsOrth,'fro'))
 
         # Apply Givens Rotation
-        sn[j], cs[j] = givens(H[j], j, sn, cs) # Apply all previous givens rotations to the new row of H and apply a new rotation to turn it into a square lower trianguar matrix (transpose is upper triangular)
+        sn[j], cs[j] = givens(H[:,j], j, sn, cs) # Apply all previous givens rotations to the new row of H and apply a new rotation to turn it into a square lower trianguar matrix (transpose is upper triangular)
 
         # Apply the same givens rotation to betaE
         betaE[j+1] = -1 * sn[j] * betaE[j] 
@@ -54,11 +58,10 @@ def gmres(A: np.ndarray, x0: np.ndarray, b: np.ndarray, maxIterations: int, thre
         if error <= threshold: # If relative error is low enough, stop iterations
             break
 
-    y = np.zeros(j+1) # y = miny(H @ y - betaE) => H @ y = betaE => y = inv(H) @ betaE
+    y = np.zeros(j+1, dtype=complex) # y = miny(H @ y - betaE) => H @ y = betaE => y = inv(H) @ betaE
     for i in range(j, -1, -1): # Solve for y using back substitution
-        y[i] = ((betaE[i] - np.sum(H[i+1:j+1, i] * y[i+1:])) / H[i,i])
-
-    x = x0 + (np.transpose(V[:j+1]) @ y) # x is solved using V and y
+        y[i] = ((betaE[i] - np.sum(np.dot(H[i, i+1:j+1], y[i+1:]))) / H[i,i])
+    x = x0 + (V[:,:j+1] @ y) # x is solved using V and y
     return x, j+1
 
 """
@@ -81,7 +84,7 @@ def givens(Hj:np.ndarray, j: int, sn: np.ndarray, cs: np.ndarray):
         Hj[i] = temp
     
     # Apply new givens rotation to make the last element of Hj equal to 0
-    divisor = math.sqrt(Hj[j]*Hj[j] + Hj[j+1] * Hj[j+1])
+    divisor = np.emath.sqrt(Hj[j]*Hj[j] + Hj[j+1] * Hj[j+1])
     snj = Hj[j+1]/divisor
     csj = Hj[j]/divisor
 
