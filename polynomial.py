@@ -1,5 +1,5 @@
 import numpy as np
-from scipy.linalg import eigvals
+from scipy.linalg import eigvals, inv
 from scipy.sparse.linalg import eigs
 from scipy import linalg
 from scipy.io import loadmat
@@ -27,7 +27,7 @@ def polynomial(A: np.ndarray, x0: np.ndarray, b: np.ndarray, dim: int):
             break
 
     # IMPORTANT : do thorough check of the Arnoldi relation before continuing
-    lhsArn = A @ (V[:,0:dim])
+    lhsArn = A @ (V[:,:dim])
     rhsArn = V @ H
     print("Correctness of Arnoldi relation : ", np.linalg.norm(lhsArn-rhsArn,'fro')/np.linalg.norm(lhsArn,'fro'))
     # and also of orthonormality of the basis
@@ -37,8 +37,11 @@ def polynomial(A: np.ndarray, x0: np.ndarray, b: np.ndarray, dim: int):
             lhsOrth[ix,jx] = np.vdot(V[:,ix],V[:,jx])
     rhsOrth = np.identity(V.shape[1])
     print("Orthonormality of Arnoldi basis : "+str(np.linalg.norm(lhsOrth-rhsOrth,'fro')/np.linalg.norm(rhsOrth,'fro')))
-
-    return eigvals(H.transpose()[:j+1,:j+1])
+    ed = np.zeros((1, dim))
+    ed[0,-1] = 1
+    ritz_matrix = H[:j+1, :j+1] + (H[j+1, j] * H[j+1, j]) * (inv(H[:j+1,:j+1].transpose().conjugate()) @ ed.transpose()) @ ed
+    return eigvals(ritz_matrix)
+    # return eigvals(H[:j+1,:j+1])
 
 def eval_poly(A: np.ndarray, v: np.ndarray, ritz: np.ndarray):
     n = A.shape[0]
@@ -65,9 +68,36 @@ def eval_poly(A: np.ndarray, v: np.ndarray, ritz: np.ndarray):
 
     return p
 
+def leja_sort(ritz: np.ndarray):
+    ordered = np.empty_like(ritz)
+    positive_eigs = [x for x in ritz if np.imag(x) >= 0]
+    ordered[0] = max(positive_eigs, key=abs)
+    positive_eigs.remove(ordered[0])
+    for i in range(len(ritz) - 1):
+        if(np.imag(ordered[i]) > 0):
+            ordered[i+1] = ordered[i].conjugate()
+        else:
+            m = 0
+            n = 0
+            for j in range(len(positive_eigs)):
+                p = 0
+                for k in range(i+1):
+                    if(np.abs(positive_eigs[j] - ordered[k]) != 0):
+                        p += np.log10(np.abs(positive_eigs[j] - ordered[k]))
+                    else:
+                        p = 0
+                        break
+                if p > m:
+                    n = j
+                    m = p
+            ordered[i+1] = positive_eigs[n]
+            positive_eigs.remove(positive_eigs[n])
+    return ordered
+    
 
 if __name__ == "__main__":
     A = loadmat("4x4x4x4b6.0000id3n1.mat")['D']
+    # A = loadmat("ted_B.mat")['Problem']['A'][0][0]
     n = A.shape[0]
 
     #plt.spy(A[1:20,1:20])
@@ -76,6 +106,9 @@ if __name__ == "__main__":
     # compute the smallest (in magnitude) eigenvalues of A
     smallEvalsA,smallEvecsA = eigs(A,50,which="SM")
     print("Smallest eigenvalues : "+str(smallEvalsA))
+    
+    # largeEvalsA,largeEvecsA = eigs(A,50,which="LM")
+    # print("Largest eigenvalues : "+str(largeEvalsA))
 
     # eig,_ = sparse.linalg.eigs(A, k=30)
     # print(eig)
@@ -85,10 +118,11 @@ if __name__ == "__main__":
     b = np.random.uniform(size=n)
     d = 100
     ritz = polynomial(A, x0, b, d)
-    # print("Ritz values : "+str(1./ritz))
+    print("Ritz values : ", np.array(sorted(ritz, key=abs)))
 
+    sorted_ritz = leja_sort(ritz)
     v = np.random.rand(n)
     vnorm = np.linalg.norm(v)
     # print(ritz)
-    pv = eval_poly(A, A*v, ritz)
+    pv = eval_poly(A, A*v, sorted_ritz)
     print(np.linalg.norm(pv - v)/vnorm)

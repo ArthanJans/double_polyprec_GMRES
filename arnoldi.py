@@ -15,7 +15,7 @@ def arnoldi(A: np.ndarray, V: np.ndarray, j: int, Hj: np.ndarray):
     wj = (A @ V[:,j]) # Multiply previous basis vector by A
 
     for i in range(j+1): # Apply Gram-Schmidt to orthoganlise wj w.r.t existing basis
-        Hj[i] = np.vdot(wj,V[:,i])
+        Hj[i] = np.vdot(V[:,i], wj)
         wj -= (Hj[i] * V[:,i])
 
     Hj[j+1] = np.linalg.norm(wj, 2) # Store the norm of wj and then normalise it
