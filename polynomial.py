@@ -27,16 +27,16 @@ def polynomial(A: np.ndarray, x0: np.ndarray, b: np.ndarray, dim: int):
             break
 
     # IMPORTANT : do thorough check of the Arnoldi relation before continuing
-    lhsArn = A @ (V[:,:dim])
-    rhsArn = V @ H
-    print("Correctness of Arnoldi relation : ", np.linalg.norm(lhsArn-rhsArn,'fro')/np.linalg.norm(lhsArn,'fro'))
+    # lhsArn = A @ (V[:,:dim])
+    # rhsArn = V @ H
+    # print("Correctness of Arnoldi relation : ", np.linalg.norm(lhsArn-rhsArn,'fro')/np.linalg.norm(lhsArn,'fro'))
     # and also of orthonormality of the basis
-    lhsOrth = np.empty([dim+1,dim+1],dtype=complex)
-    for ix in range(dim+1):
-        for jx in range(dim+1):
-            lhsOrth[ix,jx] = np.vdot(V[:,ix],V[:,jx])
-    rhsOrth = np.identity(V.shape[1])
-    print("Orthonormality of Arnoldi basis : "+str(np.linalg.norm(lhsOrth-rhsOrth,'fro')/np.linalg.norm(rhsOrth,'fro')))
+    # lhsOrth = np.empty([dim+1,dim+1],dtype=complex)
+    # for ix in range(dim+1):
+    #     for jx in range(dim+1):
+    #         lhsOrth[ix,jx] = np.vdot(V[:,ix],V[:,jx])
+    # rhsOrth = np.identity(V.shape[1])
+    # print("Orthonormality of Arnoldi basis : "+str(np.linalg.norm(lhsOrth-rhsOrth,'fro')/np.linalg.norm(rhsOrth,'fro')))
     ed = np.zeros((1, dim))
     ed[0,-1] = 1
     ritz_matrix = H[:j+1, :j+1] + (H[j+1, j] * H[j+1, j]) * (inv(H[:j+1,:j+1].transpose().conjugate()) @ ed.transpose()) @ ed
